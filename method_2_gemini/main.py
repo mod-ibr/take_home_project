@@ -2,11 +2,11 @@
 main.py
 -------
 Vision-Based Desktop Automation with Dynamic Icon Grounding
-Method 1: ScreenSeeker — Two-stage ReGround (Qwen2.5-VL-72B via HuggingFace)
+Method 2: Gemini — Google Gemini VLM bounding box detection
 
 Full workflow:
   1. Show desktop and capture screenshot
-  2. Use VLM-based grounding to locate the Notepad icon
+  2. Use Gemini VLM to locate the Notepad icon (bounding box → center coords)
   3. Double-click to launch Notepad
   4. Fetch blog posts from JSONPlaceholder API
   5. For each of 10 posts: type content → save as post_{id}.txt → close
@@ -16,29 +16,27 @@ Run:
     python main.py
 
 Requires .env in this directory:
-    HF_TOKEN=hf_YOUR_TOKEN_HERE
+    GEMINI_API_KEY=YOUR_API_KEY_HERE
 """
 
 import os
 import sys
-import time
 import logging
 
 import pyautogui
 
 from config import (
-    HF_TOKEN,
+    GEMINI_API_KEY,
+    GEMINI_MODEL_ID,
     OUTPUT_DIR,
     RETRY_COUNT,
     RETRY_DELAY,
-    REGROUND_SIZE,
-    MOUSE_DURATION,
-    DEBUG_DIR,
-    SCREENSHOT_DIR,
-    NOTEPAD_INSTRUCTION,
+    SCREEN_WIDTH,
+    SCREEN_HEIGHT,
 )
 
 from automation.desktop import (
+    take_screenshot,
     double_click,
     type_text,
     press_hotkey,
@@ -46,8 +44,8 @@ from automation.desktop import (
     wait,
 )
 
-from utils.helpers import fetch_posts, save_annotated
-from grounder import Grounder, capture_desktop_screenshot
+from vision.gemini_grounder import GeminiGrounder
+from utils.helpers import fetch_posts
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -72,11 +70,13 @@ def ensure_output_dir():
         log.info("Created output directory: %s", OUTPUT_DIR)
 
 
-def launch_notepad(grounder: Grounder) -> bool:
+def launch_notepad(grounder: GeminiGrounder) -> bool:
     """
-    Capture desktop screenshot → reground Notepad icon → double-click to launch.
+    Capture desktop screenshot → ask Gemini to find Notepad icon → double-click.
     Retries up to RETRY_COUNT times. Returns True on success.
     """
+    target = "Notepad icon"
+
     for attempt in range(1, RETRY_COUNT + 1):
         log.info(
             "─── Attempt %d / %d ───────────────────────────────", attempt, RETRY_COUNT
@@ -84,55 +84,27 @@ def launch_notepad(grounder: Grounder) -> bool:
 
         # Show desktop and capture screenshot
         log.info("Capturing desktop screenshot …")
-        screenshot = capture_desktop_screenshot()
+        desktop_img = take_screenshot()
 
-        # Use VLM-based grounding to find the Notepad icon
-        log.info("Regrounding instruction: %r", NOTEPAD_INSTRUCTION)
-        result = grounder.reground(
-            instruction=NOTEPAD_INSTRUCTION, screenshot=screenshot
-        )
+        # Use Gemini VLM to find the Notepad icon
+        coords = grounder.find_icon(desktop_img, target)
 
-        if result is None:
-            log.warning("Icon not found on attempt %d.", attempt)
-            if attempt < RETRY_COUNT:
-                log.info("Retrying in %.1fs …", RETRY_DELAY)
-                wait(RETRY_DELAY)
-            continue
+        if coords:
+            x, y = coords
+            log.info("✓ Notepad icon detected at (%d, %d)", x, y)
 
-        x, y = result
+            # Move mouse and double-click to launch
+            log.info("Double-clicking on icon at (%d, %d) …", x, y)
+            pyautogui.moveTo(x, y, duration=0.5)
+            double_click(x, y)
+            log.info("Waiting for Notepad to open …")
+            wait(2)
+            return True
 
-        # Validate coords are within screen bounds
-        screen_w, screen_h = pyautogui.size()
-        if not (0 <= x <= screen_w and 0 <= y <= screen_h):
-            log.warning(
-                "Coords (%d, %d) outside screen (%dx%d) — retrying.",
-                x,
-                y,
-                screen_w,
-                screen_h,
-            )
+        log.warning("Icon not found on attempt %d.", attempt)
+        if attempt < RETRY_COUNT:
+            log.info("Retrying in %.1fs …", RETRY_DELAY)
             wait(RETRY_DELAY)
-            continue
-
-        log.info("✓ Notepad icon detected at (%d, %d)", x, y)
-
-        # Save annotated debug screenshot
-        save_annotated(
-            screenshot,
-            x,
-            y,
-            label="Notepad",
-            filename=f"detected_notepad_{int(time.time())}.png",
-            output_dir=SCREENSHOT_DIR,
-        )
-
-        # Double-click the icon to launch Notepad
-        log.info("Double-clicking on icon at (%d, %d) …", x, y)
-        pyautogui.moveTo(x, y, duration=MOUSE_DURATION)
-        double_click(x, y)
-        log.info("Waiting for Notepad to open …")
-        wait(2)
-        return True
 
     log.error("✗ Could not locate Notepad icon after %d attempts.", RETRY_COUNT)
     return False
@@ -182,28 +154,27 @@ def close_notepad():
 
 
 def main():
-    # Validate HF token
-    if not HF_TOKEN:
+    # Validate Gemini API key
+    if not GEMINI_API_KEY:
         log.error(
-            "HF_TOKEN not found.\n"
+            "GEMINI_API_KEY not found.\n"
             "  Create a .env file in this directory:\n"
-            "      HF_TOKEN=hf_YOUR_TOKEN_HERE"
+            "      GEMINI_API_KEY=YOUR_API_KEY_HERE"
         )
         sys.exit(1)
 
-    log.info("✓ HF_TOKEN loaded from .env")
+    log.info("✓ GEMINI_API_KEY loaded from .env")
 
     # Create output directory
     ensure_output_dir()
 
-    # Initialise the VLM grounder
-    log.info("Initialising grounder (Qwen2.5-VL-72B via HuggingFace Inference API) …")
-    grounder = Grounder(
-        hf_token=HF_TOKEN,
-        max_retries=RETRY_COUNT,
-        retry_delay=RETRY_DELAY,
-        reground_size=REGROUND_SIZE,
-        screenshot_dir=str(SCREENSHOT_DIR),
+    # Initialise the Gemini grounder
+    log.info("Initialising Gemini grounder (model: %s) …", GEMINI_MODEL_ID)
+    grounder = GeminiGrounder(
+        api_key=GEMINI_API_KEY,
+        model_id=GEMINI_MODEL_ID,
+        screen_width=SCREEN_WIDTH,
+        screen_height=SCREEN_HEIGHT,
     )
 
     # Fetch blog posts from JSONPlaceholder API
@@ -218,7 +189,7 @@ def main():
     for post in posts:
         log.info("\n═══ Processing post %d ═══════════════════════════════", post["id"])
 
-        # Launch Notepad via VLM grounding
+        # Launch Notepad via Gemini grounding
         if not launch_notepad(grounder):
             log.warning("Failed to launch Notepad. Skipping post %d …", post["id"])
             continue
@@ -238,7 +209,6 @@ def main():
         log.info("Notepad closed. Moving to next post …")
 
     log.info("\n✓ All posts processed. Files saved to: %s", OUTPUT_DIR)
-    log.info("Debug screenshots saved in: %s", SCREENSHOT_DIR)
 
 
 if __name__ == "__main__":
