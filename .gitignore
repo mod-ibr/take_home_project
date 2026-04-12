@@ -1,0 +1,14 @@
+# Virtual environments
+method_1/venv_screenseeker/
+method_2_gemini/venv_gemini/
+
+# Test sample project
+test_sample/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment files
+.env
