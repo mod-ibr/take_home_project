@@ -33,7 +33,6 @@ from config import (
     RETRY_DELAY,
     REGROUND_SIZE,
     MOUSE_DURATION,
-    DEBUG_DIR,
     SCREENSHOT_DIR,
     NOTEPAD_INSTRUCTION,
 )
@@ -44,6 +43,7 @@ from automation.desktop import (
     press_hotkey,
     press_key,
     wait,
+    navigate_to_center,
 )
 
 from utils.helpers import fetch_posts, save_annotated
@@ -235,6 +235,10 @@ def main():
 
         # Close Notepad
         close_notepad()
+
+        # Navigate the Mose to the center of the screen
+        navigate_to_center()
+
         log.info("Notepad closed. Moving to next post …")
 
     log.info("\n✓ All posts processed. Files saved to: %s", OUTPUT_DIR)
