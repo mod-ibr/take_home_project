@@ -1,6 +1,7 @@
 # Virtual environments
 method_1_screenseeker/venv_screenseeker/
 method_2_gemini/venv_gemini/
+method_3_template_matching/venv_template_matching/
 
 # Test sample project
 test_sample/
