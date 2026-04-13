@@ -1,6 +1,13 @@
-google-genai
-python-dotenv
-pyautogui
-mss
-Pillow
-requests
+# Vision-Language Model (Google Gemini API)
+google-genai==1.72.0
+requests==2.33.1
+
+# Desktop Automation
+PyAutoGUI==0.9.54
+mss==10.1.0
+
+# Image Processing
+Pillow==12.2.0
+
+# Configuration
+python-dotenv==1.2.2
