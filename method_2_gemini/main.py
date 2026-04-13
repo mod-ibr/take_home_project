@@ -21,6 +21,7 @@ Requires .env in this directory:
 
 import os
 import sys
+import time
 import logging
 
 import pyautogui
@@ -33,6 +34,7 @@ from config import (
     RETRY_DELAY,
     SCREEN_WIDTH,
     SCREEN_HEIGHT,
+    SCREENSHOT_DIR,
 )
 
 from automation.desktop import (
@@ -46,7 +48,7 @@ from automation.desktop import (
 )
 
 from vision.gemini_grounder import GeminiGrounder
-from utils.helpers import fetch_posts
+from utils.helpers import fetch_posts, save_annotated
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -93,6 +95,16 @@ def launch_notepad(grounder: GeminiGrounder) -> bool:
         if coords:
             x, y = coords
             log.info("✓ Notepad icon detected at (%d, %d)", x, y)
+
+            # Save annotated debug screenshot with crosshair at detected position
+            save_annotated(
+                screenshot=desktop_img,
+                x=x,
+                y=y,
+                label="Notepad",
+                filename=f"detected_notepad_{int(time.time())}.png",
+                output_dir=SCREENSHOT_DIR,
+            )
 
             # Move mouse and double-click to launch
             log.info("Double-clicking on icon at (%d, %d) …", x, y)
