@@ -13,6 +13,12 @@ Requires .env file with:
 
 import time
 import requests
+import sys
+from pathlib import Path
+
+# Add the parent folder (method_1_screenseeker) to Python's search path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from config import HF_TOKEN
 
 if not HF_TOKEN:
