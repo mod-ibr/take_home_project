@@ -5,6 +5,7 @@ Desktop control helpers — screenshot capture, mouse, keyboard.
 Wraps pyautogui operations used throughout the automation workflow.
 """
 
+from config import MOUSE_DURATION
 import time
 import pyautogui
 import mss
@@ -48,3 +49,11 @@ def press_key(key):
 def wait(seconds):
     """Sleep for the given number of seconds."""
     time.sleep(seconds)
+
+
+def navigate_to_center():
+    """Navigate the mouse to the center of the screen."""
+    screen_width, screen_height = pyautogui.size()
+    center_x = screen_width // 2
+    center_y = screen_height // 2
+    pyautogui.moveTo(center_x, center_y, duration=MOUSE_DURATION)

@@ -42,6 +42,7 @@ from automation.desktop import (
     press_hotkey,
     press_key,
     wait,
+    navigate_to_center,
 )
 
 from vision.gemini_grounder import GeminiGrounder
@@ -207,6 +208,8 @@ def main():
         # Close Notepad
         close_notepad()
         log.info("Notepad closed. Moving to next post …")
+        # Navigate to center of the screen
+        navigate_to_center()
 
     log.info("\n✓ All posts processed. Files saved to: %s", OUTPUT_DIR)
 
