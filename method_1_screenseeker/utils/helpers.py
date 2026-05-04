@@ -32,7 +32,7 @@ def fetch_posts():
         log.warning("API fetch failed: %s — using fallback data.", e)
         return [
             {"id": i, "title": f"Test Title {i}", "body": f"Test Body {i}"}
-            for i in range(1, 11)
+            for i in range(1, 2)
         ]
 
 

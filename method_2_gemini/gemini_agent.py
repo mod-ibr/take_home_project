@@ -17,10 +17,10 @@ api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
     raise ValueError("Please set GEMINI_API_KEY in your .env file")
 
-# استخدام المكتبة الجديدة
+# Initialize the new genai client
 client = genai.Client(api_key=api_key)
 
-# هنستخدم موديل 2.0 فلاش عشان سريع ودقيق جداً في الصور
+# Using a fast and accurate flash model for image processing
 # model_id = 'gemini-3.1-flash-image-preview'
 # model_id = 'gemini-3-flash-preview'
 model_id = "gemini-3.1-flash-lite-preview"
@@ -33,7 +33,7 @@ model_id = "gemini-3.1-flash-lite-preview"
 def take_screenshot():
     """Show the Desktop then Captures the full screen and returns a PIL Image."""
     pyautogui.hotkey("win", "d")
-    time.sleep(1)  # استنى ثانية قبل التصوير
+    time.sleep(1)  # Wait a second before taking the screenshot
     with mss.mss() as sct:
         monitor = sct.monitors[1]
         sct_img = sct.grab(monitor)
@@ -44,7 +44,7 @@ def take_screenshot():
 def find_icon_with_gemini(image, target_name):
     """Sends the image to Gemini and asks for bounding box coordinates."""
 
-    print(f"Asking Gemini 2.0 to find '{target_name}'...")
+    print(f"Asking Gemini to find '{target_name}'...")
 
     prompt = f"""
     Find the {target_name} desktop icon in this image.
@@ -55,13 +55,13 @@ def find_icon_with_gemini(image, target_name):
     """
 
     try:
-        # الطريقة الجديدة للتعامل مع الـ API
+        # The new way to interact with the API
         response = client.models.generate_content(
             model=model_id, contents=[image, prompt]
         )
         result_text = response.text.strip()
 
-        # تنظيف الإجابة
+        # Clean up the response
         clean_json = re.sub(r"```[a-zA-Z]*", "", result_text).strip()
         clean_json = clean_json.strip("`")
 
@@ -83,19 +83,19 @@ def click_normalized_box(box, screen_width=1920, screen_height=1080):
     """Converts 0-1000 coordinates to actual screen pixels and clicks."""
     ymin, xmin, ymax, xmax = box
 
-    # تحويل الإحداثيات للمقاس الحقيقي للشاشة
+    # Convert coordinates to the actual screen size
     real_ymin = (ymin / 1000) * screen_height
     real_xmin = (xmin / 1000) * screen_width
     real_ymax = (ymax / 1000) * screen_height
     real_xmax = (xmax / 1000) * screen_width
 
-    # حساب نقطة المنتصف
+    # Calculate the center point
     center_x = (real_xmin + real_xmax) / 2
     center_y = (real_ymin + real_ymax) / 2
 
     print(f"Moving mouse to: X={center_x:.0f}, Y={center_y:.0f}")
 
-    # تحريك الماوس وعمل دبل كليك
+    # Move the mouse and double click
     pyautogui.moveTo(center_x, center_y, duration=0.5)
     pyautogui.doubleClick()
 
