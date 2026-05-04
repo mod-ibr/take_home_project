@@ -48,6 +48,7 @@ This project implements a **fully automated desktop workflow** that programmatic
 6. **Repeats** the cycle for 10 blog posts
 
 Three distinct **icon grounding strategies** are implemented and compared, ranging from a lightweight classical approach (OpenCV template matching) to state-of-the-art Vision-Language Models (VLMs).
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/7ac0f099-f177-4dc9-8315-0e3d0743f209" />
 
 ---
 
